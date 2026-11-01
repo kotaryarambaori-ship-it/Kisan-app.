@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>किसान साथी</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#F4F7F2;--card:#FFFFFF;--ink:#16210F;--mut:#55624C;--line:#D5DECE;--g:#2E7D32;--gt:#FFFFFF;--bad:#B3261E}
+@media (prefers-color-scheme:dark){:root{--bg:#10160D;--card:#1A2315;--ink:#EAF1E4;--mut:#A6B39C;--line:#2F3D28;--g:#7BC47F;--gt:#10160D;--bad:#F2B8B5}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans Devanagari',system-ui,sans-serif;font-size:16px}
+main{max-width:520px;margin:0 auto;padding:12px 14px 96px}
+h1{font-size:22px;margin:8px 0 2px;font-weight:600}
+.sub{color:var(--mut);font-size:14px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{font-size:17px;margin:0 0 10px;font-weight:600}
+button,input,select{font:inherit;color:var(--ink)}
+input[type=text],input[type=number],select{width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);margin-bottom:8px}
+.btn{min-height:48px;width:100%;border:0;border-radius:10px;background:var(--g);color:var(--gt);font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.5}
+.ghost{min-height:44px;border:1px solid var(--line);background:none;border-radius:8px;padding:0 12px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.pick .ghost{min-height:48px}
+.pick input{position:absolute;width:1px;height:1px;opacity:0}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.mut{color:var(--mut);font-size:13px}.price{font-weight:600;white-space:nowrap}
+img{max-width:100%;border-radius:10px;margin-bottom:10px;display:block}
+pre{white-space:pre-wrap;font:inherit;margin:0;line-height:1.6}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding:6px 8px}
+nav button{flex:1;min-height:52px;border:0;background:none;font-size:13px;color:var(--mut);cursor:pointer}
+nav button[aria-current="true"]{color:var(--g);font-weight:600}
+.note{font-size:13px;color:var(--mut);margin-top:8px}.pos{color:var(--g)}.neg{color:var(--bad)}
+</style>
+</head>
+<body>
+<main>
+<h1>किसान साथी</h1><p class="sub">नमस्ते, किसान भाई</p>
+
+<section id="t-check">
+<div class="card"><h2>फसल की बीमारी जाँचें</h2>
+<img id="pv" alt="चुनी हुई फोटो" hidden>
+<div class="pick">
+<label class="ghost">कैमरा से फोटो खींचें<input id="cam" type="file" accept="image/*" capture="environment"></label>
+<label class="ghost">गैलरी से चुनें<input id="gal" type="file" accept="image/*"></label>
+</div>
+<button class="btn" id="go" disabled>जाँच शुरू करें</button>
+<div class="note">पत्ते की साफ़ फोटो लें। नतीजे में फसल का नाम और बीमारी बताई जाएगी।</div></div>
+<div class="card" id="res" hidden><h2>नतीजा</h2><pre id="out"></pre>
+<div class="note">यह सिर्फ़ शुरुआती जानकारी है। दवा डालने से पहले कृषि अधिकारी से पूछें।</div></div>
+</section>
+
+<section id="t-mandi" hidden>
+<div class="card"><h2>आज का मंडी भाव जोड़ें</h2>
+<input id="mc" type="text" placeholder="फसल का नाम" aria-label="फसल का नाम">
+<input id="mm" type="text" placeholder="मंडी का नाम" aria-label="मंडी का नाम">
+<input id="mp" type="number" inputmode="numeric" placeholder="भाव (₹ प्रति क्विंटल)" aria-label="भाव">
+<button class="btn" id="madd">भाव जोड़ें</button></div>
+<div class="card"><h2>मंडी भाव</h2><div id="mlist"><span class="mut">लोड हो रहा है…</span></div></div>
+</section>
+
+<section id="t-acc" hidden>
+<div class="card"><h2>हिसाब-किताब</h2><div class="row"><span>बचत</span><span class="price" id="sum">₹ 0</span></div></div>
+<div class="card"><h2>नई एंट्री</h2>
+<select id="at" aria-label="प्रकार"><option value="in">आमदनी</option><option value="out">खर्च</option></select>
+<input id="an" type="text" placeholder="विवरण (जैसे खाद, बीज, फसल बिक्री)" aria-label="विवरण">
+<input id="aa" type="number" inputmode="numeric" placeholder="रकम (₹)" aria-label="रकम">
+<button class="btn" id="aadd">जोड़ें</button>
+<div class="note">यह हिसाब इसी फोन में आपकी पहचान से जुड़ा रहेगा।</div></div>
+<div class="card"><h2>पिछली एंट्री</h2><div id="alist"><span class="mut">लोड हो रहा है…</span></div></div>
+</section>
+</main>
+<nav aria-label="मुख्य मेनू">
+<button data-t="check" aria-current="true">जाँच</button>
+<button data-t="mandi">मंडी भाव</button>
+<button data-t="acc">हिसाब</button>
+</nav>
+<script>
+const $=id=>document.getElementById(id);
+const mk=(t,x,c)=>{const e=document.createElement(t);if(x!=null)e.textContent=x;if(c)e.className=c;return e};
+let uid=localStorage.getItem('uid');if(!uid){uid=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));localStorage.setItem('uid',uid)}
+const H={'content-type':'application/json','x-uid':uid};
+const fmt=t=>new Date(t).toLocaleDateString('hi-IN');
+function tab(t){['check','mandi','acc'].forEach(k=>$('t-'+k).hidden=k!==t);
+document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.t===t));
+if(t==='mandi')loadM();if(t==='acc')loadA()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+
+let imgB64=null;
+function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();
+im.onload=()=>{const s=Math.min(1,1024/Math.max(im.width,im.height)),c=document.createElement('canvas');
+c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+const d=c.toDataURL('image/jpeg',0.82);$('pv').src=d;$('pv').hidden=false;ok(d.split(',')[1])};
+im.onerror=no;im.src=u})}
+async function pick(e){const f=e.target.files[0];if(!f)return;
+try{imgB64=await shrink(f);$('go').disabled=false}catch(x){$('res').hidden=false;$('out').textContent='फोटो खुल नहीं पाई। दूसरी फोटो चुनें।'}
+e.target.value=''}
+$('cam').onchange=pick;$('gal').onchange=pick;
+$('go').onclick=async()=>{$('go').disabled=true;$('res').hidden=false;$('out').textContent='जाँच हो रही है… (1 मिनट तक लग सकता है)';
+const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),90000);let r;
+try{r=await fetch('/api/check',{method:'POST',headers:H,body:JSON.stringify({image:imgB64}),signal:ac.signal})}
+catch(e){clearTimeout(tm);$('out').textContent=e.name==='AbortError'?'सर्वर जवाब नहीं दे रहा। 1 मिनट बाद फिर कोशिश करें।':'सर्वर से जुड़ नहीं पाया। सर्वर चालू है या नहीं देखें।';$('go').disabled=false;return}
+clearTimeout(tm);let d=null;try{d=await r.json()}catch(e){}
+if(r.ok&&d&&d.text)$('out').textContent=d.text;
+else if(d&&d.error)$('out').textContent=d.error;
+else $('out').textContent='सर्वर में दिक्कत (कोड '+r.status+'). '+(r.status===404?'backend (server.js) चालू नहीं है, सिर्फ़ फ़ाइलें रखी गई हैं।':r.status===413?'फोटो बहुत बड़ी है।':'थोड़ी देर बाद फिर कोशिश करें।');
+$('go').disabled=false};
+
+async function loadM(){const box=$('mlist');try{const l=await(await fetch('/api/mandi')).json();box.textContent='';
+if(!l.length)box.append(mk('span','अभी कोई भाव नहीं जुड़ा।','mut'));
+l.forEach(v=>{const r=mk('div',null,'row'),d=mk('div');d.append(mk('div',v.crop),mk('div',v.place+' · '+fmt(v.t),'mut'));
+r.append(d,mk('div','₹ '+v.price+' / क्विंटल','price'));box.append(r)})}catch(e){box.textContent='भाव लोड नहीं हो पाए।'}}
+$('madd').onclick=async()=>{const crop=$('mc').value.trim(),place=$('mm').value.trim(),price=Number($('mp').value);
+if(!crop||!place||!(price>0))return;
+const r=await fetch('/api/mandi',{method:'POST',headers:H,body:JSON.stringify({crop,place,price})});
+if(r.ok){$('mc').value=$('mm').value=$('mp').value='';loadM()}};
+
+async function loadA(){const box=$('alist');try{const l=await(await fetch('/api/ledger',{headers:H})).json();box.textContent='';let tot=0;
+if(!l.length)box.append(mk('span','अभी कोई एंट्री नहीं।','mut'));
+l.forEach(v=>{tot+=v.type==='in'?v.amt:-v.amt;const r=mk('div',null,'row'),d=mk('div');
+d.append(mk('div',v.note||(v.type==='in'?'आमदनी':'खर्च')),mk('div',fmt(v.t),'mut'));
+const rt=mk('div');rt.style.cssText='display:flex;gap:8px;align-items:center';
+rt.append(mk('span',(v.type==='in'?'+ ':'− ')+'₹ '+v.amt,'price '+(v.type==='in'?'pos':'neg')));
+const x=mk('button','हटाएँ','ghost');x.onclick=async()=>{await fetch('/api/ledger/'+v.id,{method:'DELETE',headers:H});loadA()};
+rt.append(x);r.append(d,rt);box.append(r)});
+$('sum').textContent=(tot<0?'− ':'')+'₹ '+Math.abs(tot);$('sum').className='price '+(tot<0?'neg':'pos')}
+catch(e){box.textContent='हिसाब लोड नहीं हो पाया।'}}
+$('aadd').onclick=async()=>{const amt=Number($('aa').value);if(!(amt>0))return;
+const r=await fetch('/api/ledger',{method:'POST',headers:H,body:JSON.stringify({type:$('at').value,note:$('an').value.trim(),amt})});
+if(r.ok){$('an').value=$('aa').value='';loadA()}};
+</script>
+</body>
+</html>
