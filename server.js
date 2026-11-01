@@ -69,23 +69,24 @@ app.post('/api/check', async (req, res) => {
   if (limited('c' + req.ip, 20)) return res.status(429).json({ error: 'बहुत ज़्यादा कोशिशें। थोड़ी देर बाद करें।' });
   const { image } = req.body || {};
   if (!image || typeof image !== 'string') return res.status(400).json({ error: 'फोटो नहीं मिली।' });
-  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'सर्वर पर API key नहीं लगी है।' });
+  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'सर्वर पर API key नहीं लगी है।' });
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
+    const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
       body: JSON.stringify({
-        model: process.env.MODEL || 'claude-sonnet-5-5',
-        max_tokens: 800,
-        messages: [{ role: 'user', content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
-          { type: 'text', text: PROMPT }
+        contents: [{ parts: [
+          { text: PROMPT },
+          { inline_data: { mime_type: 'image/jpeg', data: image } }
         ] }]
       })
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || 'API error');
-    res.json({ text: data.content.map(c => c.text || '').join('') });
+    const text = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+    if (!text) throw new Error('empty answer');
+    res.json({ text });
   } catch (e) {
     console.error(e.message);
     res.status(502).json({ error: 'जाँच नहीं हो पाई। दोबारा कोशिश करें।' });
