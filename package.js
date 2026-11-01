@@ -1,0 +1,8 @@
+{
+  "name": "kisan-saathi",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": "22.x" },
+  "dependencies": { "better-sqlite3": "^12.2.0", "express": "^4.21.0" }
+}
