@@ -69,6 +69,7 @@ const PROMPT = `तुम एक अनुभवी कृषि सलाहक
 async function askGemini(model, image) {
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
+    signal: AbortSignal.timeout(20000),
     headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
     body: JSON.stringify({
       contents: [{ parts: [
@@ -95,9 +96,12 @@ app.post('/api/check', async (req, res) => {
   if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'सर्वर पर API key नहीं लगी है।' });
 
   const models = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-flash-lite-latest'].filter(Boolean))];
+  const start = Date.now();
   let last = null;
+  outer:
   for (const model of models) {
     for (let attempt = 0; attempt < 2; attempt++) {
+      if (Date.now() - start > 70000) break outer;
       try {
         const text = await askGemini(model, image);
         return res.json({ text });
@@ -109,7 +113,8 @@ app.post('/api/check', async (req, res) => {
       }
     }
   }
-  const why = String(last && last.message || '').slice(0, 200);
+  let why = String((last && last.message) || '').slice(0, 200);
+  if (last && (last.name === 'TimeoutError' || last.name === 'AbortError')) why = 'Google ने 20 सेकंड में जवाब नहीं दिया';
   res.status(502).json({ error: 'जाँच नहीं हो पाई। कारण: ' + why });
 });
 
