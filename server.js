@@ -30,6 +30,7 @@ function limited(key, max) {
   return a.length > max;
 }
 const uidOf = req => String(req.get('x-uid') || '').slice(0, 64);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 app.get('/api/mandi', (req, res) =>
   res.json(db.prepare('SELECT * FROM mandi ORDER BY t DESC LIMIT 50').all()));
@@ -65,32 +66,51 @@ const PROMPT = `तुम एक अनुभवी कृषि सलाहक
 5) कब कृषि अधिकारी से मिलना चाहिए
 अगर फोटो साफ़ न हो या पौधा स्वस्थ दिखे तो साफ़ बताओ। कोई markdown चिह्न मत लगाओ, छोटे वाक्य लिखो।`;
 
+async function askGemini(model, image) {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
+    body: JSON.stringify({
+      contents: [{ parts: [
+        { text: PROMPT },
+        { inline_data: { mime_type: 'image/jpeg', data: image } }
+      ] }]
+    })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const err = new Error(data?.error?.message || ('HTTP ' + r.status));
+    err.status = r.status;
+    throw err;
+  }
+  const text = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+  if (!text) throw new Error('Google ne khali jawab diya (' + (data.candidates?.[0]?.finishReason || data.promptFeedback?.blockReason || 'unknown') + ')');
+  return text;
+}
+
 app.post('/api/check', async (req, res) => {
   if (limited('c' + req.ip, 20)) return res.status(429).json({ error: 'बहुत ज़्यादा कोशिशें। थोड़ी देर बाद करें।' });
   const { image } = req.body || {};
   if (!image || typeof image !== 'string') return res.status(400).json({ error: 'फोटो नहीं मिली।' });
   if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'सर्वर पर API key नहीं लगी है।' });
-  try {
-    const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
-      body: JSON.stringify({
-        contents: [{ parts: [
-          { text: PROMPT },
-          { inline_data: { mime_type: 'image/jpeg', data: image } }
-        ] }]
-      })
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data?.error?.message || 'API error');
-    const text = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
-    if (!text) throw new Error('empty answer');
-    res.json({ text });
-  } catch (e) {
-    console.error(e.message);
-    res.status(502).json({ error: 'जाँच नहीं हो पाई। दोबारा कोशिश करें।' });
+
+  const models = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-flash-lite-latest'].filter(Boolean))];
+  let last = null;
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const text = await askGemini(model, image);
+        return res.json({ text });
+      } catch (e) {
+        last = e;
+        console.error(model + ': ' + e.message);
+        if ([429, 500, 503].includes(e.status) && attempt === 0) { await sleep(2000); continue; }
+        break;
+      }
+    }
   }
+  const why = String(last && last.message || '').slice(0, 200);
+  res.status(502).json({ error: 'जाँच नहीं हो पाई। कारण: ' + why });
 });
 
 app.use((err, req, res, next) => res.status(err.status || 500).json({ error: err.status === 413 ? 'फोटो बहुत बड़ी है।' : 'सर्वर में दिक्कत।' }));
